@@ -60,3 +60,21 @@ void display_board(WINDOW *w, tetris_game *obj) {
   }
   wnoutrefresh(w);
 }
+
+// Display a tetris piece in a dedicated window
+void display_piece(WINDOW *w, tetris_block block) {
+  int b;
+  tetris_location c;
+  wclear(w);
+  box(w, 0, 0);
+  if (block.typ == -1) {
+    wnoutrefresh(w);
+    return;
+  }
+  for (b = 0; b < TETRIS; b++) {
+    c = TETROMINOS[block.typ][block.ori][b];
+    wmove(w, c.row + 1, c.col * COLS_PER_CELL + 1);
+    ADD_BLOCK(w, TYPE_TO_CELL(block.typ));
+  }
+  wnoutrefresh(w);
+}
