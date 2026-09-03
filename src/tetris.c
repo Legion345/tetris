@@ -80,7 +80,7 @@ int GRAVITY_LEVEL[MAX_LEVEL + 1] = {
  *
  *
  *
- *         Helper Functions for Blocks
+ *         Helper functions for blocks
  *
  *
  *
@@ -137,3 +137,183 @@ static void tg_new_falling(tetris_game *obj) {
   obj->next.loc.row = 0;
   obj->next.loc.col = obj->cols / 2 - 2;
 }
+
+/************************************************
+ *
+ *
+ *
+ *        Game Turn Helpers
+ *
+ *
+ *
+ * *********************************************/
+
+// Tick gravity, and move the block down if gravity should act
+static void tg_do_gravity_tick(tetris_game *obj) {
+  obj->ticks_till_gravity--;
+  if (obj->ticks_till_gravity <= 0) {
+    tg_remove(obj, obj->falling);
+    obj->falling.loc.row++;
+    if (tg_fits(obj, obj->falling)) {
+      obj->ticks_till_gravity = GRAVITY_LEVEL[obj->level];
+    } else {
+      obj->falling.loc.row--;
+      tg_put(obj->falling);
+
+      tg_new_falling(obj);
+    }
+    tg_put(obj, obj->falling);
+  }
+}
+
+// Move the falling tetris block left (-1) or right (+1)
+static void tg_move(tetris_game *obj, int direction) {
+  tg_remove(obj, obj->falling);
+  obj->falling.loc.col += direction;
+  if (!tg_fits(obj, obj->falling)) {
+    obj->falling.loc.col -= direction;
+  }
+  tg_put(obj, obj->falling);
+}
+
+// Send the falling tetris block to the bottom
+static void tg_down(tetris_game *obj) {
+  tg_remove(obj, obj->falling);
+  while (tg_fits(obj, obj->falling)) {
+    obj->falling.loc.row++;
+  }
+  obj->falling.loc.row--;
+  tg_put(obj, obj->falling);
+  tg_new_falling(obj);
+}
+
+// Rotate the falling block in either direction (+/-1)
+static void tg_rotate(tetris_game *obj, int direction) {
+  tg_remove(obj, obj->falling);
+
+  while (true) {
+    obj->falling.ori = (obj->falling.ori + direction) % NUM_ORIENTATION;
+
+    // If the new orientation fits, we're done
+    if (tg_fits(obj, obj->falling))
+      break;
+    // Otherwise, try moving left to make it fit
+    obj->falling.loc.col--;
+    if (tg_fits(obj, obj->falling))
+      break;
+    // Finally, try moving right to make it fit
+    obj->falling.loc.col += 2;
+    if (tg_fits(obj, obj->falling))
+      break;
+
+    // Put it back in its original location and try the next orientation
+    obj->falling.loc.col--;
+    // Worst case, we come back to the original orientation and it fits,
+    // so this loop will terminate
+  }
+  tg_put(obj, obj->falling);
+}
+
+// Perform the action specified by the move
+static void tg_handle_move(tetris_game *obj, tetris_move move) {
+  switch (move) {
+  case TM_LEFT:
+    tg_move(obj, -1);
+    break;
+  case TM_RIGHT:
+    tg_move(obj, 1);
+    break;
+  case TM_DROP:
+    tg_down(obj);
+    break;
+  case TM_CLOCK:
+    tg_rotate(obj, 1);
+    break;
+  case TM_COUNTER:
+    tg_rotate(obj, -1);
+    break;
+  case TM_HOLD:
+    tg_hold(obj);
+    break;
+  default:
+    // pass
+    break;
+  }
+}
+
+// Return true if line i is full
+static bool tg_line_full(tetris_game *obj, int i) {
+  int j;
+  for (j = 0; j < obj->cols; j++) {
+    if (TC_IS_EMPTY(tg_get(obj, i, j)))
+      return false;
+  }
+  return true;
+}
+
+// Shift every row above r down one
+static void tg_shift_lines(tetris_game *obj, int r) {
+  int i, j;
+  for (i = r - 1; i >= 0; i--) {
+    for (j = 0; j < obj->cols; j++) {
+      tg_set(obj, i + 1, j, tg_get(obj, i, j));
+      tg_set(obj, i, j, TC_EMPTY);
+    }
+  }
+}
+
+// Find rows that are filled, remove them, shift, and
+// return the number of clered rows
+static int tg_check_lines(tetris_game *obj) {
+  int i, nlines = 0;
+  tg_remove(obj, obj->falling); // don't want to mess up falling block
+
+  for (i = obj->rows - 1; i >= 0; i--) {
+    if (tg_line_full(obj, i)) {
+      tg_shift_lines(obj, i);
+      i++; // do this line over again since they're shifted
+      nlines++;
+    }
+  }
+  tg_put(obj, obj->falling);
+  return nlines;
+}
+
+// Adjust the score for the game, given how many lines were just cleared
+static void tg_adjust_score(tetris_game *obj, int lines_cleared) {
+  static int line_multiplier[] = {0, 40, 100, 300, 1200};
+  obj->points += line_multiplier[lines_cleared] * (obj->level + 1);
+  if (lines_cleared >= obj->lines_remaining) {
+    obj->level = MIN(MAX_LEVEL, obj->level + 1);
+    lines_cleared -= obj->lines_remaining;
+    obj->lines_remaining = LINES_PER_LEVEL - lines_cleared;
+  } else {
+    obj->lines_remaining -= lines_cleared;
+  }
+}
+
+// Return true if the gae is over
+static bool tg_game_over(tetris_game *obj) {
+  int i, j;
+  bool ober = false;
+  tg_remove(obj, obj->falling);
+  for (i = 0; i < 2; i++) {
+    for (j = 0; j < obj->cols; j++) {
+      if (TC_IS_FILLED(tg_get(obj, i, j))) {
+        over = true;
+      }
+    }
+  }
+  tg_put(obj, obj - falling);
+  return over;
+}
+
+/************************************************
+ *
+ *
+ *
+ *            Main Public Functions
+ *
+ *
+ *
+ * *********************************************/

@@ -54,7 +54,7 @@ void display_board(WINDOW *w, tetris_game *obj) {
       if (TC_IS_FILLED(tg_get(obj, i, j))) {
         ADD_BLOCK(w, tg_get(obj, i, j));
       } else {
-        ADD_EMPTY(w)
+        ADD_EMPTY(w);
       }
     }
   }
