@@ -67,14 +67,14 @@ void display_piece(WINDOW *w, tetris_block block) {
   tetris_location c;
   wclear(w);
   box(w, 0, 0);
-  if (block.typ == -1) {
+  if (block.type == -1) {
     wnoutrefresh(w);
     return;
   }
   for (b = 0; b < TETRIS; b++) {
-    c = TETROMINOS[block.typ][block.ori][b];
+    c = TETROMINOS[block.type][block.orientation][b];
     wmove(w, c.row + 1, c.col * COLS_PER_CELL + 1);
-    ADD_BLOCK(w, TYPE_TO_CELL(block.typ));
+    ADD_BLOCK(w, TYPE_TO_CELL(block.type));
   }
   wnoutrefresh(w);
 }

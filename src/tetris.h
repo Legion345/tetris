@@ -25,8 +25,8 @@
 #define TC_BLOCK_STR "\u2588"
 
 // Questions about a tetris cell
-#define TC_EMPTY_STR(x) ((x) == TC_EMPTY)
-#define TC_BLOCK_STR(x) (!TC_IS_EMPTY(x))
+#define TC_IS_EMPTY(x) ((x) == TC_EMPTY)
+#define TC_IS_FILLED(x) (!TC_IS_EMPTY(x))
 
 // How many cells to a tetromino?
 #define TETRIS 4
@@ -99,7 +99,7 @@ typedef struct {
   tetris_block stored;
 
   // Number of game ticks until the block will move down
-  int ticks_until_gravity;
+  int ticks_till_gravity;
 
   // Number of lines until you advance to the next level
   int lines_remaining;
